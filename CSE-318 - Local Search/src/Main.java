@@ -1,12 +1,9 @@
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        String path = "inputs/car-s-91.";
+        String path = "inputs/tre-s-92.";
         File courseFile = new File(path + "crs");
         File studentFile = new File(path + "stu");
         int n = Integer.parseInt(tail(courseFile).split(" ")[0]);
@@ -14,23 +11,170 @@ public class Main {
         ArrayList<Student> students = new ArrayList<>();
         getInput(courseFile, studentFile, courseGraph, students);
 
-        courseGraph.sort((o1, o2) -> Integer.compare(o2.adjacencyList.size(), o1.adjacencyList.size()));
-        System.out.println(courseGraph);
-        //courseGraph.sort((o1, o2) -> Integer.compare(o2.enrolled, o1.enrolled));
-        //Collections.shuffle(courseGraph);
+        applyScheme1(courseGraph, students, 0, 5000, n);
+        applyScheme2(courseGraph, students, 0, 5000, n);
+        applyScheme3(courseGraph, students, 0, 5000, n);
+        applyScheme4(courseGraph, students, 0, 5000, n);
+
+    }
+
+    static void applyScheme1(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+        doScheduling(courseGraph, 1, n);
+        courseGraph.sort(Comparator.comparingInt(o -> o.slot));
+        System.out.println(courseGraph.get(n - 1).slot + 1);
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        reload(courseGraph);
+    }
+    static void applyScheme2(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+        doScheduling(courseGraph, 2, n);
+        courseGraph.sort(Comparator.comparingInt(o -> o.slot));
+        System.out.println(courseGraph.get(n - 1).slot + 1);
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        reload(courseGraph);
+    }
+    static void applyScheme3(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+        doScheduling(courseGraph, 3, n);
+        courseGraph.sort(Comparator.comparingInt(o -> o.slot));
+        System.out.println(courseGraph.get(n - 1).slot + 1);
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        reload(courseGraph);
+    }
+    static void applyScheme4(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+        doScheduling(courseGraph, 4, n);
+        courseGraph.sort(Comparator.comparingInt(o -> o.slot));
+        System.out.println(courseGraph.get(n - 1).slot + 1);
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        reload(courseGraph);
+    }
+
+    static double getPenalty(ArrayList<Student> students, int penalty){
+        if(penalty == 0) return getAverageExponentialPenalty(students);
+        else return getAverageLinearPenalty(students);
+    }
+
+    static void doScheduling(ArrayList<Course> courseGraph, int heuristic, int n){
+        if(heuristic == 2){
+            for(int i = 0; i < n; i++){
+                getMostSaturatedNode(courseGraph, n).setSlot(n);
+            }
+            return;
+        }
+        else if(heuristic == 1){
+            courseGraph.sort((o1, o2) -> Integer.compare(o2.conflictList.size(), o1.conflictList.size()));
+        }
+        else if(heuristic == 3){
+            courseGraph.sort((o1, o2) -> Integer.compare(o2.enrolled, o1.enrolled));
+        }
+        else if(heuristic == 4){
+            Collections.shuffle(courseGraph);
+        }
         for(Course c: courseGraph){
             c.setSlot(n);
         }
+    }
+
+    static void doKempeChainInterchange(Course root, int swapSlot){
+        int origSlot = root.slot;
+        root.slot = swapSlot;
+        root.swapped = true;
+        for(Course c : root.conflictList){
+            if(c.slot == swapSlot && !c.swapped){
+                doKempeChainInterchange(c, origSlot);
+            }
+        }
+    }
+
+    static boolean doPairSwap(Course u, Course v){
+        if(u == v) return false;
+        if(u.slot == v.slot) return false;
+        for(Course c : u.conflictList){
+            if(c.slot == v.slot) return false;
+        }
+        for(Course c : v.conflictList){
+            if(c.slot == u.slot) return false;
+        }
+        doSwap(u, v);
+        return true;
+    }
+
+    static void applyPerturbativeHeuristics(ArrayList<Course> courseGraph, ArrayList<Student> students, int m, int penalty){
+        Random random = new Random();
+        double origPenalty = getPenalty(students, penalty);
+        double newPenalty;
+
+        System.out.println(origPenalty);
 
 
-        //for(int i = 0; i < n; i++){
-        //    getMostSaturatedNode(courseGraph, n).setSlot(n);
-        //}
+        for(int i = 0; i < m; i++){
+            Course c = courseGraph.get(random.nextInt(courseGraph.size()));
+            int origSlot = c.slot;
+            if(c.conflictList.size() == 0) continue;
+            int swapSlot = c.conflictList.get(random.nextInt(c.conflictList.size())).slot;
+            doKempeChainInterchange(c, swapSlot);
+            newPenalty = getPenalty(students, penalty);
+            if(newPenalty > origPenalty){
+                refresh(courseGraph);
+                doKempeChainInterchange(c, origSlot);
+                newPenalty = origPenalty;
+            }
+            origPenalty = newPenalty;
+            refresh(courseGraph);
+        }
+        System.out.println(origPenalty);
 
-        //showOutput(courseGraph);
+        for(int i = 0; i < m; i++){
+            int j = random.nextInt(courseGraph.size());
+            int k = random.nextInt(courseGraph.size());
+            while(i == k){
+                j = random.nextInt(courseGraph.size());
+                k = random.nextInt(courseGraph.size());
+            }
+            Course u = courseGraph.get(j);
+            Course v = courseGraph.get(k);
+            if(doPairSwap(u, v)){
+                newPenalty = getPenalty(students, 0);
+                if(newPenalty > origPenalty){
+                    doSwap(u, v);
+                    newPenalty = origPenalty;
+                }
+                origPenalty = newPenalty;
+            }
+        }
+        System.out.println(origPenalty);
+    }
 
-        System.out.println(testConstraint(students, n));
+    static void doSwap(Course u, Course v){
+        int temp = u.slot;
+        u.slot = v.slot;
+        v.slot = temp;
+    }
 
+    static double getAverageLinearPenalty(ArrayList<Student> students){
+        double penalty = 0;
+        for(Student s : students){
+            penalty += s.getLinearPenalty();
+        }
+        return penalty / students.size();
+    }
+
+    static double getAverageExponentialPenalty(ArrayList<Student> students){
+        double penalty = 0;
+        for(Student s : students){
+            penalty += s.getExponentialPenalty();
+        }
+        return penalty / students.size();
+    }
+
+    static void refresh(ArrayList<Course> courseGraph){
+        for(Course c : courseGraph){
+            c.swapped = false;
+        }
+    }
+
+    static void reload(ArrayList<Course> courseGraph){
+        for(Course c : courseGraph){
+            c.slot = -1;
+        }
     }
 
     static Course getMostSaturatedNode(ArrayList<Course> courseGraph, int n){
@@ -41,8 +185,8 @@ public class Main {
             if(c.slot != -1) continue;
             int[] slots = new int[n];
             int satDegree = 0;
-            int unassignedDegree = c.adjacencyList.size();
-            for(Course c2 : c.adjacencyList){
+            int unassignedDegree = c.conflictList.size();
+            for(Course c2 : c.conflictList){
                 if(c2.slot == -1) continue;
                 slots[c2.slot]++;
             }
@@ -75,7 +219,7 @@ public class Main {
         return true;
     }
 
-    public static String tail( File file ) {
+    static String tail( File file ) {
         RandomAccessFile fileHandler = null;
         try {
             fileHandler = new RandomAccessFile( file, "r" );
@@ -116,7 +260,7 @@ public class Main {
         }
     }
 
-    public static void getInput(File courseFile, File studentFile, ArrayList<Course> courseGraph, ArrayList<Student> students) throws IOException {
+    static void getInput(File courseFile, File studentFile, ArrayList<Course> courseGraph, ArrayList<Student> students) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(courseFile)));
         String line;
         int j = 0;
@@ -135,8 +279,8 @@ public class Main {
                 students.get(j).courses.add(courseGraph.get(i - 1));
                 for(int k : courses){
                     if(k == i) continue;
-                    if(!courseGraph.get(i - 1).adjacencyList.contains(courseGraph.get(k - 1))){
-                        courseGraph.get(i - 1).adjacencyList.add(courseGraph.get(k - 1));
+                    if(!courseGraph.get(i - 1).conflictList.contains(courseGraph.get(k - 1))){
+                        courseGraph.get(i - 1).conflictList.add(courseGraph.get(k - 1));
                     }
                 }
             }
@@ -144,8 +288,7 @@ public class Main {
         }
     }
 
-    public static void showOutput(ArrayList<Course> courseGraph){
-        courseGraph.sort(Comparator.comparingInt(o -> o.slot));
+    static void showOutput(ArrayList<Course> courseGraph){
         for(Course c: courseGraph){
             System.out.println(c.courseNo + " " + c.slot);
         }
