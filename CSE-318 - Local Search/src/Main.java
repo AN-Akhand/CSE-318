@@ -3,53 +3,130 @@ import java.util.*;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        String path = "inputs/tre-s-92.";
-        File courseFile = new File(path + "crs");
-        File studentFile = new File(path + "stu");
-        int n = Integer.parseInt(tail(courseFile).split(" ")[0]);
-        ArrayList<Course> courseGraph = new ArrayList<>();
-        ArrayList<Student> students = new ArrayList<>();
-        getInput(courseFile, studentFile, courseGraph, students);
+        String[] paths = {"car-f-92", "car-s-91", "kfu-s-93", "tre-s-92", "yor-f-83"};
+        //String[] paths = {"car-s-91"};
+        BufferedWriter[] writers = new BufferedWriter[5];
+        for(int i = 1; i <= 5; i++){
+            //writers[i - 1] = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("temp" + i +".csv")));
+            writers[i - 1] = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("scheme" + i +".csv")));
+            writers[i - 1].write("Benchmark Data, Timeslots, After Largest Degree, After Kempe, After Pairswap\n");
+        }
+        for(String path : paths) {
+            File courseFile = new File(path + ".crs");
+            File studentFile = new File(path + ".stu");
+            int n = Integer.parseInt(tail(courseFile).split(" ")[0]);
+            ArrayList<Course> courseGraph = new ArrayList<>();
+            ArrayList<Student> students = new ArrayList<>();
+            getInput(courseFile, studentFile, courseGraph, students);
 
-        applyScheme1(courseGraph, students, 0, 5000, n);
-        applyScheme2(courseGraph, students, 0, 5000, n);
-        applyScheme3(courseGraph, students, 0, 5000, n);
-        applyScheme4(courseGraph, students, 0, 5000, n);
+            writers[0].write(path + ",");
+            applyScheme1(courseGraph, students, 3000, n, writers[0]);
+            writers[1].write(path + ",");
+            applyScheme2(courseGraph, students, 3000, n, writers[1]);
+            writers[2].write(path + ",");
+            applyScheme3(courseGraph, students, 3000, n, writers[2]);
+            writers[3].write(path + ",");
+            applyScheme4(courseGraph, students, 3000, n, writers[3]);
+            writers[4].write(path + ",");
+            applyScheme5(courseGraph, students, 3000, n, writers[4]);
+        }
+
+        for(int i = 1; i <= 5; i++){
+            writers[i - 1].close();
+        }
 
     }
 
-    static void applyScheme1(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+    static void applyScheme1(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 1, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
         System.out.println(courseGraph.get(n - 1).slot + 1);
-        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        writer.write(courseGraph.get(n - 1).slot + 1 + ",");
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
     }
-    static void applyScheme2(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+    static void applyScheme2(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 2, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
         System.out.println(courseGraph.get(n - 1).slot + 1);
-        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        writer.write(courseGraph.get(n - 1).slot + 1 + ",");
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
     }
-    static void applyScheme3(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+    static void applyScheme3(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 3, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
         System.out.println(courseGraph.get(n - 1).slot + 1);
-        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        writer.write(courseGraph.get(n - 1).slot + 1 + ",");
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
     }
-    static void applyScheme4(ArrayList<Course> courseGraph, ArrayList<Student> students, int penalty, int pertHeu ,int n){
+    static void applyScheme4(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 4, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
         System.out.println(courseGraph.get(n - 1).slot + 1);
-        applyPerturbativeHeuristics(courseGraph, students, pertHeu, penalty);
+        writer.write(courseGraph.get(n - 1).slot + 1 + ",");
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
     }
 
-    static double getPenalty(ArrayList<Student> students, int penalty){
-        if(penalty == 0) return getAverageExponentialPenalty(students);
-        else return getAverageLinearPenalty(students);
+    static void applyScheme5(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
+        doScheduling(courseGraph, 2, n);
+        courseGraph.sort(Comparator.comparingInt(o -> o.slot));
+        System.out.println(courseGraph.get(n - 1).slot + 1);
+        writer.write(courseGraph.get(n - 1).slot + 1 + ",");
+        applyPerturbativeHeuristics(courseGraph, students, pertHeu, 1, writer);
+        reload(courseGraph);
+    }
+
+    static void applyPerturbativeHeuristics(ArrayList<Course> courseGraph, ArrayList<Student> students, int m, int penalty, BufferedWriter writer) throws IOException {
+        Random random = new Random(123);
+        double origPenalty = getPenalty(students, penalty);
+        double newPenalty;
+
+        System.out.println(origPenalty);
+        writer.write(origPenalty + ",");
+
+
+        for(int i = 0; i < m; i++){
+            Course c = courseGraph.get(random.nextInt(courseGraph.size()));
+            int origSlot = c.slot;
+            if(c.conflictList.size() == 0) continue;
+            int swapSlot = c.conflictList.get(random.nextInt(c.conflictList.size())).slot;
+            doKempeChainInterchange(c, swapSlot);
+            newPenalty = getPenalty(students, penalty);
+            if(newPenalty > origPenalty){
+                refresh(courseGraph);
+                doKempeChainInterchange(c, origSlot);
+                newPenalty = origPenalty;
+            }
+            origPenalty = newPenalty;
+            refresh(courseGraph);
+        }
+        System.out.println(origPenalty);
+        writer.write(origPenalty + ",");
+
+        for(int i = 0; i < m; i++){
+            int j = random.nextInt(courseGraph.size());
+            int k = random.nextInt(courseGraph.size());
+            while(i == k){
+                j = random.nextInt(courseGraph.size());
+                k = random.nextInt(courseGraph.size());
+            }
+            Course u = courseGraph.get(j);
+            Course v = courseGraph.get(k);
+            if(doPairSwap(u, v)){
+                newPenalty = getPenalty(students, 0);
+                if(newPenalty > origPenalty){
+                    doSwap(u, v);
+                    newPenalty = origPenalty;
+                }
+                origPenalty = newPenalty;
+            }
+        }
+        System.out.println(origPenalty);
+        writer.write(origPenalty + "\n");
+
     }
 
     static void doScheduling(ArrayList<Course> courseGraph, int heuristic, int n){
@@ -66,7 +143,7 @@ public class Main {
             courseGraph.sort((o1, o2) -> Integer.compare(o2.enrolled, o1.enrolled));
         }
         else if(heuristic == 4){
-            Collections.shuffle(courseGraph);
+            Collections.shuffle(courseGraph, new Random(123));
         }
         for(Course c: courseGraph){
             c.setSlot(n);
@@ -97,56 +174,15 @@ public class Main {
         return true;
     }
 
-    static void applyPerturbativeHeuristics(ArrayList<Course> courseGraph, ArrayList<Student> students, int m, int penalty){
-        Random random = new Random();
-        double origPenalty = getPenalty(students, penalty);
-        double newPenalty;
-
-        System.out.println(origPenalty);
-
-
-        for(int i = 0; i < m; i++){
-            Course c = courseGraph.get(random.nextInt(courseGraph.size()));
-            int origSlot = c.slot;
-            if(c.conflictList.size() == 0) continue;
-            int swapSlot = c.conflictList.get(random.nextInt(c.conflictList.size())).slot;
-            doKempeChainInterchange(c, swapSlot);
-            newPenalty = getPenalty(students, penalty);
-            if(newPenalty > origPenalty){
-                refresh(courseGraph);
-                doKempeChainInterchange(c, origSlot);
-                newPenalty = origPenalty;
-            }
-            origPenalty = newPenalty;
-            refresh(courseGraph);
-        }
-        System.out.println(origPenalty);
-
-        for(int i = 0; i < m; i++){
-            int j = random.nextInt(courseGraph.size());
-            int k = random.nextInt(courseGraph.size());
-            while(i == k){
-                j = random.nextInt(courseGraph.size());
-                k = random.nextInt(courseGraph.size());
-            }
-            Course u = courseGraph.get(j);
-            Course v = courseGraph.get(k);
-            if(doPairSwap(u, v)){
-                newPenalty = getPenalty(students, 0);
-                if(newPenalty > origPenalty){
-                    doSwap(u, v);
-                    newPenalty = origPenalty;
-                }
-                origPenalty = newPenalty;
-            }
-        }
-        System.out.println(origPenalty);
-    }
-
     static void doSwap(Course u, Course v){
         int temp = u.slot;
         u.slot = v.slot;
         v.slot = temp;
+    }
+
+    static double getPenalty(ArrayList<Student> students, int penalty){
+        if(penalty == 0) return getAverageExponentialPenalty(students);
+        else return getAverageLinearPenalty(students);
     }
 
     static double getAverageLinearPenalty(ArrayList<Student> students){
@@ -175,6 +211,7 @@ public class Main {
         for(Course c : courseGraph){
             c.slot = -1;
         }
+        courseGraph.sort(Comparator.comparingInt(o -> o.courseNo));
     }
 
     static Course getMostSaturatedNode(ArrayList<Course> courseGraph, int n){
