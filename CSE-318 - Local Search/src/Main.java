@@ -4,13 +4,15 @@ import java.util.*;
 public class Main {
     public static void main(String[] args) throws IOException {
         String[] paths = {"car-f-92", "car-s-91", "kfu-s-93", "tre-s-92", "yor-f-83"};
+        String[] knownBest = {"32,3.74", "35,4.42", "20,12.69", "23,7.75", "21,34.84"};
         //String[] paths = {"car-s-91"};
         BufferedWriter[] writers = new BufferedWriter[5];
         for(int i = 1; i <= 5; i++){
             //writers[i - 1] = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("temp" + i +".csv")));
             writers[i - 1] = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("scheme" + i +".csv")));
-            writers[i - 1].write("Benchmark Data, Timeslots, After Largest Degree, After Kempe, After Pairswap\n");
+            writers[i - 1].write("Benchmark Data,Timeslots,Penalty,Timeslots,After Largest Degree,After Kempe,After Pairswap\n");
         }
+        int i = 0;
         for(String path : paths) {
             File courseFile = new File(path + ".crs");
             File studentFile = new File(path + ".stu");
@@ -19,20 +21,31 @@ public class Main {
             ArrayList<Student> students = new ArrayList<>();
             getInput(courseFile, studentFile, courseGraph, students);
 
-            writers[0].write(path + ",");
+            System.out.println();
+            System.out.println(path + " Scheme 1");
+            writers[0].write(path + "," + knownBest[i] + ",");
             applyScheme1(courseGraph, students, 3000, n, writers[0]);
-            writers[1].write(path + ",");
+            System.out.println();
+            System.out.println(path + " Scheme 2");
+            writers[1].write(path + "," + knownBest[i] + ",");
             applyScheme2(courseGraph, students, 3000, n, writers[1]);
-            writers[2].write(path + ",");
+            System.out.println();
+            System.out.println(path + " Scheme 3");
+            writers[2].write(path + "," +  knownBest[i] + ",");
             applyScheme3(courseGraph, students, 3000, n, writers[2]);
-            writers[3].write(path + ",");
+            System.out.println();
+            System.out.println(path + " Scheme 4");
+            writers[3].write(path + "," + knownBest[i] + ",");
             applyScheme4(courseGraph, students, 3000, n, writers[3]);
-            writers[4].write(path + ",");
+            System.out.println();
+            System.out.println(path + " Scheme 5");
+            writers[4].write(path + "," +  knownBest[i] + ",");
             applyScheme5(courseGraph, students, 3000, n, writers[4]);
+            i++;
         }
 
-        for(int i = 1; i <= 5; i++){
-            writers[i - 1].close();
+        for(i = 0; i < 5; i++){
+            writers[i].close();
         }
 
     }
@@ -40,7 +53,7 @@ public class Main {
     static void applyScheme1(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 1, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
-        System.out.println(courseGraph.get(n - 1).slot + 1);
+        System.out.println("Slots: " + (courseGraph.get(n - 1).slot + 1));
         writer.write(courseGraph.get(n - 1).slot + 1 + ",");
         applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
@@ -48,7 +61,7 @@ public class Main {
     static void applyScheme2(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 2, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
-        System.out.println(courseGraph.get(n - 1).slot + 1);
+        System.out.println("Slots: " + (courseGraph.get(n - 1).slot + 1));
         writer.write(courseGraph.get(n - 1).slot + 1 + ",");
         applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
@@ -56,7 +69,7 @@ public class Main {
     static void applyScheme3(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 3, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
-        System.out.println(courseGraph.get(n - 1).slot + 1);
+        System.out.println("Slots: " + (courseGraph.get(n - 1).slot + 1));
         writer.write(courseGraph.get(n - 1).slot + 1 + ",");
         applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
@@ -64,7 +77,7 @@ public class Main {
     static void applyScheme4(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 4, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
-        System.out.println(courseGraph.get(n - 1).slot + 1);
+        System.out.println("Slots: " + (courseGraph.get(n - 1).slot + 1));
         writer.write(courseGraph.get(n - 1).slot + 1 + ",");
         applyPerturbativeHeuristics(courseGraph, students, pertHeu, 0, writer);
         reload(courseGraph);
@@ -73,7 +86,7 @@ public class Main {
     static void applyScheme5(ArrayList<Course> courseGraph, ArrayList<Student> students, int pertHeu, int n, BufferedWriter writer) throws IOException {
         doScheduling(courseGraph, 2, n);
         courseGraph.sort(Comparator.comparingInt(o -> o.slot));
-        System.out.println(courseGraph.get(n - 1).slot + 1);
+        System.out.println("Slots: " + (courseGraph.get(n - 1).slot + 1));
         writer.write(courseGraph.get(n - 1).slot + 1 + ",");
         applyPerturbativeHeuristics(courseGraph, students, pertHeu, 1, writer);
         reload(courseGraph);
@@ -84,7 +97,7 @@ public class Main {
         double origPenalty = getPenalty(students, penalty);
         double newPenalty;
 
-        System.out.println(origPenalty);
+        System.out.println("Initial penalty: " + origPenalty);
         writer.write(origPenalty + ",");
 
 
@@ -103,7 +116,7 @@ public class Main {
             origPenalty = newPenalty;
             refresh(courseGraph);
         }
-        System.out.println(origPenalty);
+        System.out.println("After kempe chain: " + origPenalty);
         writer.write(origPenalty + ",");
 
         for(int i = 0; i < m; i++){
@@ -124,7 +137,7 @@ public class Main {
                 origPenalty = newPenalty;
             }
         }
-        System.out.println(origPenalty);
+        System.out.println("After pairswap: " + origPenalty);
         writer.write(origPenalty + "\n");
 
     }

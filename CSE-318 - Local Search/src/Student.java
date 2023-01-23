@@ -25,12 +25,15 @@ public class Student {
         courses.sort(Comparator.comparingInt(o -> o.slot));
         int n = courses.size();
         for(int i = 0; i < n - 1; i++){
-            int gap = courses.get(i + 1).slot - courses.get(i).slot;
-            if(gap == 0) {
-                System.out.println("Failed");
-                System.exit(1);
+            for(int j = i + 1; j < n; j++) {
+                if (i == j) continue;
+                int gap = Math.abs(courses.get(j).slot - courses.get(i).slot);
+                if (gap == 0) {
+                    System.out.println("Failed");
+                    System.exit(1);
+                }
+                if(gap <= 5) penalty += (2 * (5 - gap));
             }
-            if(gap <= 5) penalty += (2 * (5 - gap));
         }
         return penalty;
     }
@@ -40,12 +43,15 @@ public class Student {
         courses.sort(Comparator.comparingInt(o -> o.slot));
         int n = courses.size();
         for(int i = 0; i < n - 1; i++){
-            int gap = courses.get(i + 1).slot - courses.get(i).slot;
-            if(gap == 0) {
-                System.out.println("Failed");
-                System.exit(1);
+            for(int j = i + 1; j < n; j++) {
+                if(i == j) continue;
+                int gap = Math.abs(courses.get(j).slot - courses.get(i).slot);
+                if (gap == 0) {
+                    System.out.println("Failed");
+                    System.exit(1);
+                }
+                if (gap <= 5) penalty += Math.pow(2, 5 - gap);
             }
-            if(gap <= 5) penalty += Math.pow(2, 5 - gap);
         }
         return penalty;
     }
